@@ -1,11 +1,55 @@
 from rest_framework import serializers
-from recipe.models import Recipe
+from recipe.models import Recipe, Subcategory
 
+        
 class RecipeSerializer(serializers.modelSerializer):
-    status = serializers.SerializermethodField()
+    status = serializers.SerializerMethodField()
+    subcategory = serializers.SerializerMethodField()
+    last_used = serializers.SerializerMethodField()
+
 
     class Meta:
-        model = Recipe
-        fields = [
-            '__all__'
-            ]
+        model = Recipe, Subcategory
+        fields =  '__all__'
+
+    def create(self, validated_data):
+        subcategory_name = validated_data.pop('subcategory', None)
+        recipe = Recipe.objects.create(**validated_data)
+
+        if subcategory_name:
+            clean_name = subcategory_name.strip()
+            sub_obj =  Subcategory.objects.filter(name__iexact=clean_name).first()
+
+            if not sub_obj:
+                sub_obj = Subcategory.objects.create(name=clean_name)
+
+            recipe.subcategory = sub_obj
+            recipe.save()
+
+        return recipe
+
+    def update(self, instance, validated_data):
+        subcategory_name = validated_data.pop('subcategory', None)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        if subcategory_name:
+            clean_name = subcategory_name.strip()
+            sub_obj = Subcategory.objects.filter(name__iexact=clean_name).first()
+
+            if not sub_obj:
+                sub_obj = Subcategory.objects.create(name=clean_name)
+
+            instance,self.subcategory= sub_obj
+        else:
+            instance.subcategory = None
+
+        instance.save()
+        return instance
+
+    def get_last_used(self, obj):
+        latest_log = obj.auditlog_set.order_by('-timestamp').first()
+        if latest_log:
+            return latest_log.timestamp
+        return None
