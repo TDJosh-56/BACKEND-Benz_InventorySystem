@@ -1,13 +1,18 @@
 from rest_framework import serializers
 from recipe.models import Recipe, Subcategory
 
+class SubcategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Subcategory
+        fields = ['id', 'name']
+
         
 class RecipeSerializer(serializers.modelSerializer):
     status = serializers.SerializerMethodField()
     subcategory = serializers.SerializerMethodField()
     last_used = serializers.SerializerMethodField()
-
-
+    image = serializers.ImageField(required=True)
+    
     class Meta:
         model = Recipe, Subcategory
         fields =  '__all__'
@@ -53,3 +58,9 @@ class RecipeSerializer(serializers.modelSerializer):
         if latest_log:
             return latest_log.timestamp
         return None
+
+    def get_status(self, obj):
+        if obj.is_archive:
+            return "Archived"
+        else:
+            return "Active"
