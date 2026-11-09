@@ -25,7 +25,7 @@ class Recipe(models.Model):
     yield_unit = models.CharField(max_length=20)
     price = models.FloatField()
     description = models.CharField(max_length=200)
-    image = models.ImageField(upload_to='product/', validators=validate_image_size)
+    image = models.ImageField(upload_to='product/', validators=[validate_image_size])
     is_archive = models.BooleanField(default=False)
     ingredients = models.ManyToManyField('ingredient.Ingredient', through='RecipeIngredient', blank=True)
 
