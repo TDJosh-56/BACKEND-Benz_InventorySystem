@@ -5,6 +5,7 @@ from rest_framework.decorators import api_view
 from .models import Recipe, Subcategory
 from django.db.models import Q, Count
 from rest_framework import status
+from django.shortcuts import get_object_or_404 
 
 @api_view(['GET'])
 def get_subcategories(request):
@@ -13,7 +14,7 @@ def get_subcategories(request):
         serializer = SubcategorySerializer(subcategories, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
-@api_view(['GET', 'POST', 'PATCH', 'DELETE'])
+@api_view(['GET', 'POST'])
 def get_recipe(request):
     
     if request.method == 'GET':
@@ -22,7 +23,7 @@ def get_recipe(request):
         category = request.GET.get('category')
         subcategory = request.GET.get('subcategory')
 
-        recipes = Recipe.objects.all().order_by('-name')
+        recipes = Recipe.objects.all().order_by('name')
 
         if status_filter:
             if status_filter.lower() == 'archived':
@@ -32,8 +33,7 @@ def get_recipe(request):
 
         if search:
             recipes = recipes.filter(
-                Q(name__icontains=search) | Q(description__icontains=search) | Q(ingredients__name__icontains=search).distinct()
-            )
+                Q(name__icontains=search) | Q(description__icontains=search) | Q(ingredients__name__icontains=search)).distinct()
 
         if category:
             recipes = recipes.filter(category__iexact=category.strip())
@@ -41,34 +41,36 @@ def get_recipe(request):
         if subcategory:
             recipes = recipes.filter(subcategory__name__iexact=subcategory.strip())
         
-        serializer = RecipeSerializer(recipes, many=True)
+        serializer = RecipeSerializer(recipes, many=True,  context={'request': request})
         return Response(serializer.data)
 
     elif request.method == 'POST':
-        serializer = RecipeSerializer(data=request.data)
+        serializer = RecipeSerializer(data=request.data, context={'request': request})
 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    elif request.method == 'PATCH':
-        serializer = RecipeSerializer(recipes, data=request.data, partial=True, context={'request': request})
 
+@api_view(['GET', 'PATCH', 'DELETE'])
+def get_recipe_detail(request, pk):
+    
+    recipe = get_object_or_404(Recipe, pk=pk)
+
+    if request.method == 'GET':
+        serializer = RecipeSerializer(recipe, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    elif request.method == 'PATCH':
+        serializer = RecipeSerializer(recipe, data=request.data, partial=True, context={'request': request})
+        
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response(
-            serializer.errors,
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    # DELETE EVENT
     elif request.method == 'DELETE':
-        recipes.delete()
+        recipe.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
-        return Response(
-            {"message": "Recipe deleted successfully"},
-            status=status.HTTP_200_OK
-        )
