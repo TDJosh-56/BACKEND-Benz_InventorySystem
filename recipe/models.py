@@ -12,17 +12,17 @@ class Subcategory(models.Model):
 
 class Recipe(models.Model):
     CATEGORY_CHOICES = [
-        ('food', 'Food')
+        ('food', 'Food'),
         ('drinks', 'Drinks')
     ]
     name = models.CharField(max_length=50)
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
-    Subcategory = models.ForeignKey(Subcategory, on_delete=models.SET_NULL, null=True, blank=True, relative_name='recipes')
+    Subcategory = models.ForeignKey(Subcategory, on_delete=models.SET_NULL, null=True, blank=True, related_name='recipes')
     yield_per_batch = models.IntegerField()
     yield_unit = models.CharField(max_length=20)
     price = models.FloatField()
     description = models.CharField(max_length=200)
-    image = models.ImageField(upload_to='product/', validators=validate_image_size)
+    image = models.ImageField(upload_to='product/', validators=[validate_image_size])
     is_archive = models.BooleanField(default=False)
     ingredients = models.ManyToManyField('ingredient.Ingredient', blank=True)
 
