@@ -20,6 +20,7 @@ class Ingredient(models.Model):
         validators=[MinValueValidator(0)])
     unit = models.CharField(max_length=10, choices=UNIT_CHOICES)
     reorder_unit = models.CharField(max_length=10, choices=UNIT_CHOICES)
+    cost_item = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     category = models.CharField(
         max_length=20, choices=CATEGORY_CHOICES, default='Ingredient')
     is_active = models.BooleanField(default=True)
@@ -47,10 +48,10 @@ class Ingredient(models.Model):
     @property
     def status(self):
         if self.current_stock <= 0:
-            return 'outOfStock'
+            return 'Out of Stock'
         if self.current_stock <= self.threshold_in_stock_unit:
-            return 'lowStock'
-        return 'inStock'
+            return 'Low Stock'
+        return 'In Stock'
 
 
 class InventoryTransaction(models.Model):
