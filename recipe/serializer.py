@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from recipe.models import Recipe, Subcategory, RecipeIngredient
 from django.db import transaction
-from ingredient.models import Ingredient
+from inventory.models import Ingredient
 
 class SubcategorySerializer(serializers.ModelSerializer):
     class Meta:
