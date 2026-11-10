@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-8$hr3q@n!8(17*(1h)*7mob!bvbet2ac$78f2$g96!0nxp2(#x
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '10.0.2.2']
 
 
 # Application definition
@@ -36,8 +36,10 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'django.contrib.staticfiles',\
-    'rest_framework'
+    'django.contrib.staticfiles',
+    'rest_framework',
+    'inventory',
+    'recipe'
 ]
 
 MIDDLEWARE = [
@@ -126,3 +128,5 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
