@@ -11,10 +11,11 @@ class SubcategorySerializer(serializers.ModelSerializer):
 class RecipeIngredientSerializer(serializers.ModelSerializer):
     ingredientId = serializers.PrimaryKeyRelatedField(source='ingredient', queryset=Ingredient.objects.all())
     ingredient_name = serializers.CharField(source='ingredient.name', read_only=True)
+    category = serializers.CharField(source='ingredient.category', read_only=True)
     
     class Meta:
         model = RecipeIngredient
-        fields =  ['ingredientId', 'ingredient_name', 'quantity', 'unit']
+        fields =  ['ingredientId', 'ingredient_name', 'category', 'quantity', 'unit']
 
 
 class RecipeSerializer(serializers.ModelSerializer):
