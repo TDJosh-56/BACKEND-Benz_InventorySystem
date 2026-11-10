@@ -7,6 +7,7 @@ def validate_image_size(file):
     if file.size > max_mb * 1024 * 1024:
         raise ValidationError("Image must not exceed 5 MB")
     
+    
 class Subcategory(models.Model):
     name = models.CharField(max_length=30, unique=True)
 
