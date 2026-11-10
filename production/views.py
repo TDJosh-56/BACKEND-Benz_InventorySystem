@@ -13,11 +13,11 @@ class ProductionRecordViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
 
         #to comply with flutter 7-day edit window
-        seven_days_ago = timezone.now() - timedelta(days: 7)
+        seven_days_ago = timezone.now() - timedelta(days = 7)
         if instance.timestamp < seven_days_ago:
             return Response(
-                {"detail": "This production record is locked. Edits are only allowed within 7 days of creation."}
-                                status=status.HTTP_403_FORBIDDEN
+                {"detail": "This production record is locked. Edits are only allowed within 7 days of creation."},
+                status=status.HTTP_403_FORBIDDEN
             )
 
         if not instance.original_quantity:

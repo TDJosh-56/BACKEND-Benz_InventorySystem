@@ -4,7 +4,7 @@ from .views import ProductionRecordViewSet
 
 router = DefaultRouter()
 
-router.register(r'records', ProductionRecordViewSet, basename='productionrecord')
+router.register(r'records', ProductionRecordViewSet, basename='production-record')
 
 urlpatterns = [
     path('', include(router.urls)),
