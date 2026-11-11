@@ -2,7 +2,6 @@ from datetime import timedelta
 
 from django.utils import timezone
 from django.db.models import Max
-
 from app_settings.models import Setting
 from production.models import ProductionRecord
 from recipe.models import Recipe

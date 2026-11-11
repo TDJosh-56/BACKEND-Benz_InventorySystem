@@ -5,29 +5,28 @@ from inventory.models import Ingredient
 from production.models import ProductionRecord
 
 
-def get_inventory_summary():
-    ingredients = list(
+def get_inventory_items():
+    return list(
         Ingredient.objects.filter(is_active=True)
     )
 
-    total = len(ingredients)
 
-    low_stock = sum(
-        ingredient.status == 'Low Stock'
-        for ingredient in ingredients
-    )
-
-    out_of_stock = sum(
-        ingredient.status == 'Out of Stock'
-        for ingredient in ingredients
-    )
-
-    return {
-        'total_ingredients': total,
-        'low_stock_ingredients': low_stock,
-        'out_of_stock_ingredients': out_of_stock,
-        'in_stock_ingredients': total - low_stock - out_of_stock,
+def get_stock_status_counts(Ingredient):
+    counts = {
+        'in_stock': 0,
+        'low_stock': 0,
+        'out_of_stock': 0,
     }
+
+    for item in Ingredient:
+        if item.status == 'In Stock':
+            counts['in_stock'] += 1
+        elif item.status == 'Low Stock':
+            counts['low_stock'] += 1
+        elif item.status == 'Out of Stock':
+            counts['out_of_stock'] += 1
+
+    return counts
 
 
 def get_production_today():
@@ -42,44 +41,42 @@ def get_production_today():
     return total or 0
 
 
-def get_stock_alerts():
-    ingredients = Ingredient.objects.filter(is_active=True)
-
-    alerts = []
-
-    for ingredient in ingredients:
-        if ingredient.status != 'In Stock':
-            alerts.append({
-                'ingredient_id': ingredient.pk,
-                'ingredient': ingredient.name,
-                'stock': float(ingredient.current_stock),
-                'unit': ingredient.unit,
-                'threshold': float(ingredient.threshold_in_stock_unit),
-                'status': ingredient.status,
-            })
-
-    return alerts
-
-
-def get_stock_levels():
-    ingredients = Ingredient.objects.filter(is_active=True)
-
-    return [
-        {
-            'ingredient_id': ingredient.pk,
-            'ingredient': ingredient.name,
-            'stock': float(ingredient.current_stock),
-            'unit': ingredient.unit,
-            'status': ingredient.status,
-        }
-        for ingredient in ingredients
-    ]
-
+def get_stock_item_data(item):
+    return {
+        'ingredient_id': item.pk,
+        'name': item.name,
+        'current_stock': float(item.current_stock),
+        'unit': item.unit,
+        'status': item.status,
+    }
 
 def get_dashboard_data():
+    inventory = get_inventory_items()
+
+    stock_counts = get_stock_status_counts(inventory)
+
+    stock_alerts = [
+        get_stock_item_data(item)
+        for item in inventory
+        if item.status in ('Low Stock', 'Out of Stock')
+    ]
+
+    stock_levels = [
+        get_stock_item_data(item)
+        for item in inventory
+    ]
+
     return {
-        'summary': get_inventory_summary(),
-        'production_today': get_production_today(),
-        'stock_alerts': get_stock_alerts(),
-        'stock_levels': get_stock_levels(),
+        'summary': {
+            'total_inventory': len(inventory),
+            'low_stock_alerts': stock_counts['low_stock'],
+            'out_of_stock_alerts': stock_counts['out_of_stock'],
+            'production_today': get_production_today(),
+        },
+        'stock_alerts': stock_alerts,
+        'stock_levels': stock_levels,
+        'stock_overview': {
+            **stock_counts,
+            'total': len(inventory),
+        },
     }
