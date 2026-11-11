@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .serializer import RecipeSerializer, SubcategorySerializer
+from .serializer import RecipeSerializer, SubcategorySerializer, CATEGORY_IN
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from .models import Recipe, Subcategory
@@ -36,7 +36,8 @@ def get_recipe(request):
                 Q(name__icontains=search) | Q(description__icontains=search) | Q(ingredients__name__icontains=search)).distinct()
 
         if category:
-            recipes = recipes.filter(category__iexact=category.strip())
+            mapped = CATEGORY_IN.get(category.strip().lower())
+            recipes = recipes.filter(category=mapped) if mapped else recipes.none()
 
         if subcategory:
             recipes = recipes.filter(subcategory__name__iexact=subcategory.strip())
