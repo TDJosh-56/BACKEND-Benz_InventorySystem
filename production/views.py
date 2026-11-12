@@ -9,7 +9,7 @@ class ProductionRecordViewSet(viewsets.ModelViewSet):
     queryset = ProductionRecord.objects.all().order_by('-timestamp')
     serializer_serializer_class = ProductionRecordSerializer
 
-    def update(self, request, *args, **kwargs):
+"""    def update(self, request, *args, **kwargs):
         instance = self.get_object()
 
         #to comply with flutter 7-day edit window
@@ -25,4 +25,4 @@ class ProductionRecordViewSet(viewsets.ModelViewSet):
 
         request.data['edited_at'] = timezone.now()
 
-        return super().update(request, *args, **kwargs) 
+        return super().update(request, *args, **kwargs) """
