@@ -21,6 +21,18 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+
+    # Inventory API
     path('api/ingredients/', include('inventory.urls')),
-    path('api/recipes/', include('recipe.urls'))
-]  + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+    # Recipe API
+    path('api/recipes/', include('recipe.urls')),
+
+    # Production API
+    path('api/production/', include('production.urls')),
+]
+
+urlpatterns += static(
+    settings.MEDIA_URL,
+    document_root=settings.MEDIA_ROOT
+)

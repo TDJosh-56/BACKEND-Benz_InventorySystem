@@ -28,7 +28,7 @@ class AuditLog(models.Model):
     ingredient = models.ForeignKey(
         'inventory.Ingredient', null=True, blank=True, on_delete=models.SET_NULL)
     production = models.ForeignKey(
-        'production.Production', null=True, blank=True, on_delete=models.SET_NULL)
+        'production.ProductionRecord', null=True, blank=True, on_delete=models.SET_NULL)
     settings = models.ForeignKey(
         'app_settings.Setting', null=True, blank=True, on_delete=models.SET_NULL)
 

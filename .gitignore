@@ -5,7 +5,7 @@ __pycache__/
 
 # Django
 *.log
-db.sqlite3
+*.sqlite3
 media/
 
 # Virtual environment
@@ -23,3 +23,7 @@ env/
 # Frontend
 node_modules/
 dist/
+
+# OS
+.DS_Store
+Thumbs.db
