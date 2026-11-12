@@ -8,7 +8,9 @@ from django.core.files.base import ContentFile
 from rest_framework.fields import SkipField, empty
 from recipe.models import validate_image_size
 from inventory.units import UNITS, compatible
+import logging
 
+logger = logging.getLogger(__name__)
 
 class Base64ImageField(serializers.ImageField):
     def validate_empty_values(self, data):
@@ -157,24 +159,25 @@ class RecipeSerializer(serializers.ModelSerializer):
         if 'subcategory' in validated_data:
             instance.subcategory = self._get_or_create_subcategory(validated_data.pop('subcategory'))
 
+        image_changed = 'image' in validated_data
+        old_name = instance.image.name if instance.image else None
+        storage = instance.image.storage
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
 
+        if image_changed and old_name:
+            new_name = instance.image.name if instance.image else None
+            if new_name != old_name:
+                def _delete_old_file():
+                    try:
+                        storage.delete(old_name)
+                    except Exception:
+                        logger.exception('Could not delete old image %s', old_name)
+                transaction.on_commit(_delete_old_file)
 
         if ingredients_data is not None:
             instance.recipe_ingredients.all().delete()
             self._set_ingredients(instance, ingredients_data)
         return instance
-
-    def get_last_used(self, obj):
-        latest_log = obj.auditlog_set.order_by('-timestamp').first()
-        if latest_log:
-            return latest_log.timestamp
-        return None
-
-    def get_status(self, obj):
-        if obj.is_archive:
-            return "Archived"
-        else:
-            return "Active"

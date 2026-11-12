@@ -22,14 +22,10 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
 
-    # Inventory API
     path('api/ingredients/', include('inventory.urls')),
-
-    # Recipe API
     path('api/recipes/', include('recipe.urls')),
-
-    # Production API
     path('api/production/', include('production.urls')),
+    path('api/dashboard/', include('dashboard.urls')),
 ]
 
 urlpatterns += static(
