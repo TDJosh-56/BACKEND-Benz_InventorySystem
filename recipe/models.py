@@ -26,9 +26,10 @@ class Recipe(models.Model):
     yield_unit = models.CharField(max_length=20)
     price = models.FloatField()
     description = models.CharField(max_length=200)
-    image = models.ImageField(upload_to='product/', validators=[validate_image_size])
+    image = models.ImageField(upload_to='product/', validators=[validate_image_size], null=True, blank=True)
     is_archive = models.BooleanField(default=False)
     ingredients = models.ManyToManyField('inventory.Ingredient', through='RecipeIngredient', blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
 class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='recipe_ingredients')
