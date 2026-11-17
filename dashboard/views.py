@@ -6,7 +6,7 @@ from .serializers import DashboardSerializer
 
 
 @api_view(['GET'])
-def summary(self, request):
+def summary(request):
     data = get_dashboard_data()
 
     serializer = DashboardSerializer(data=data)
