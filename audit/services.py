@@ -6,7 +6,7 @@ Delta = AuditLog.Delta
 
 
 def log(category, title, subtitle='', change='', delta=Delta.NEUTRAL,
-        recipe=None, ingredient=None):
+        recipe=None, ingredient=None, production=None):
     return AuditLog.objects.create(
         category=category,
         title=title[:120],
