@@ -4,16 +4,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from audit import services as audit
-<<<<<<< Updated upstream
 from .models import Setting
-=======
-from audit.models import AuditLog
-
-from .models import MAX_FAILED_ATTEMPTS, Setting
->>>>>>> Stashed changes
 from .serializers import (
-    ChangePasscodeSerializer, PasscodeSerializer, RecoveryCodeSerializer,
-    ResetPasscodeSerializer, SettingSerializer, # to be implemented (passcode change, reset, recovery)
+    ChangePasscodeSerializer, 
+    PasscodeSerializer, 
+    RecoveryCodeSerializer,
+    ResetPasscodeSerializer, 
+    SettingSerializer, 
 )
 
 FIELD_LABELS = {
