@@ -9,6 +9,7 @@ from rest_framework.fields import SkipField, empty
 from recipe.models import validate_image_size
 from inventory.units import UNITS, compatible
 import logging
+from audit.services import log, Category, Delta
 
 logger = logging.getLogger(__name__)
 
@@ -150,11 +151,13 @@ class RecipeSerializer(serializers.ModelSerializer):
         recipe = Recipe.objects.create( subcategory=self._get_or_create_subcategory(subcategory_name), **validated_data)
 
         self._set_ingredients(recipe, ingredients_data)
+        log(Category.RECIPE, 'Recipe added', recipe.name, 'Created', Delta.POSITIVE, recipe=recipe)
         return recipe
 
     @transaction.atomic
     def update(self, instance, validated_data):
         ingredients_data = validated_data.pop('recipe_ingredients', None)
+        was_archived = instance.is_archive
 
         if 'subcategory' in validated_data:
             instance.subcategory = self._get_or_create_subcategory(validated_data.pop('subcategory'))
@@ -180,4 +183,11 @@ class RecipeSerializer(serializers.ModelSerializer):
         if ingredients_data is not None:
             instance.recipe_ingredients.all().delete()
             self._set_ingredients(instance, ingredients_data)
+
+        if was_archived != instance.is_archive:
+            log(Category.RECIPE, 'Recipe archived', instance.name,
+                'Archived' if instance.is_archive else 'Restored', recipe=instance)
+        else:
+            log(Category.RECIPE, 'Recipe updated', instance.name, 'Edited', recipe=instance)
+
         return instance
