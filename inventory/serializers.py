@@ -28,7 +28,7 @@ class CostField(QuantityField):
 
 
 class IngredientSerializer(serializers.ModelSerializer):
-    ingredient_id = serializers.IntegerField(source='pk', read_only=True)
+    ingredient_id = serializers.CharField(source='pk', read_only=True)
     ingredient = serializers.CharField(source='name', max_length=100)
     stock = QuantityField(source='current_stock', required=False)
     threshold = QuantityField(source='reorder_threshold', required=False)

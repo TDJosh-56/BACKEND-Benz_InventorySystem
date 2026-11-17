@@ -10,7 +10,7 @@ class DashboardSummarySerializer(serializers.Serializer):
 
 
 class StockItemSerializer(serializers.Serializer):
-    ingredient_id = serializers.IntegerField()
+    ingredient_id = serializers.CharField()
     name = serializers.CharField()
     current_stock = serializers.FloatField()
     unit = serializers.CharField()

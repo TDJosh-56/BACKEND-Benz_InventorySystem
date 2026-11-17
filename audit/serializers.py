@@ -11,7 +11,7 @@ class AuditLogSerializer(serializers.ModelSerializer):
     changeLabel = serializers.CharField(source='change_label', read_only=True)
     deltaType = serializers.CharField(source='delta_type', read_only=True)
     recipeId = serializers.IntegerField(source='recipe_id', read_only=True)
-    ingredientId = serializers.IntegerField(source='ingredient_id', read_only=True)
+    ingredientId = serializers.CharField(source='ingredient_id', read_only=True)
 
     class Meta:
         model = AuditLog
