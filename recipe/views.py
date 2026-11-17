@@ -6,6 +6,7 @@ from .models import Recipe, Subcategory
 from django.db.models import Q, Count
 from rest_framework import status
 from django.shortcuts import get_object_or_404 
+from audit.services import log, Category, Delta
 
 @api_view(['GET'])
 def get_subcategories(request):
@@ -72,6 +73,12 @@ def get_recipe_detail(request, pk):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     elif request.method == 'DELETE':
+        name = recipe.name
+
+        if recipe.image:
+            recipe.image.delete(save=False)
+
         recipe.delete()
+        log(Category.RECIPE, 'Recipe deleted', name, 'Removed', Delta.NEGATIVE)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
