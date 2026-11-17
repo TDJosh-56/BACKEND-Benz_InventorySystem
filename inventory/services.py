@@ -4,6 +4,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from django.db import transaction
 from django.db.models import OuterRef, Subquery
 from django.utils import timezone
+from audit.services import log, Category, Delta, fmt_qty
 
 from .models import Ingredient, InventoryTransaction as Tx
 from .units import convert
@@ -26,6 +27,35 @@ def record_change(ingredient, new_stock, tx_type, description='', reference=''):
         quantity_change=new_stock - previous, previous_stock=previous,
         new_stock=new_stock, description=description, reference=reference)
 
+@transaction.atomic
+def deduct_stock(items, reference='', description='Production'):
+    """items: [(ingredient_id, quantity, unit), ...]. All-or-nothing.
+    Raises ValueError (nothing is changed) if units don't match or stock is short."""
+    wanted = {}
+    for ing_id, qty, unit in items:
+        wanted.setdefault(int(ing_id), []).append((qty, unit))
+
+    done = []
+    # lock in id order so two simultaneous productions can't deadlock
+    for ing in Ingredient.objects.select_for_update().filter(pk__in=wanted).order_by('pk'):
+        amount = Decimal(0)
+        for qty, unit in wanted[ing.pk]:
+            converted = convert(qty, unit, ing.unit)
+            if converted is None:
+                raise ValueError(f'{unit} cannot be converted to {ing.unit} for {ing.name}.')
+            amount += converted
+        amount = to_decimal(amount)
+        if ing.current_stock - amount < 0:
+            raise ValueError(f'Not enough {ing.name}: need {fmt_qty(amount)} {ing.unit}, '
+                             f'have {fmt_qty(ing.current_stock)}.')
+        tx = record_change(ing, ing.current_stock - amount, Tx.Type.PRODUCTION, description, reference)
+        log(Category.INVENTORY, 'Stock used', ing.name,
+            f'-{fmt_qty(amount)} {ing.unit}', Delta.NEGATIVE, ingredient=ing)
+        done.append(tx)
+
+    if len(done) != len(wanted):
+        raise ValueError('One or more ingredients no longer exist.')
+    return done
 
 @transaction.atomic
 def adjust_stock(ingredient_id, delta, tx_type=Tx.Type.ADJUSTMENT, description='', reference=''):
