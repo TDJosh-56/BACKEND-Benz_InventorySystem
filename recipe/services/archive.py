@@ -1,9 +1,8 @@
 from datetime import timedelta
-
+from audit.services import log, Category, Delta
 from django.utils import timezone
 from django.db.models import Max
 from app_settings.models import Setting
-from production.models import ProductionRecord
 from recipe.models import Recipe
 
 
@@ -11,7 +10,7 @@ def autoarchive():
     settings = Setting.objects.first()
 
     if not settings or not settings.autoarchiveoldrecipe:
-        return
+        return 0
 
     one_month_ago = timezone.now() - timedelta(days=30)
 
@@ -27,6 +26,8 @@ def autoarchive():
         if last_used and last_used < one_month_ago:
             recipe.is_archive = True
             recipe.save(update_fields=['is_archive'])
+            log(Category.RECIPE, 'Recipe automatically archived', recipe.name, 'Archived', Delta.NEUTRAL)
+
             archived_count += 1
 
     return archived_count
