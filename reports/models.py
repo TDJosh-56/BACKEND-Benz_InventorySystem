@@ -1,0 +1,1 @@
+# Reports are computed from inventory, recipe and production data; no tables needed.

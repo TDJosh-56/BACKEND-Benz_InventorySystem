@@ -3,6 +3,8 @@
 from django.db import transaction
 from rest_framework import serializers
 
+from audit.services import log, Category, Delta, fmt_qty
+
 from .models import Ingredient, InventoryTransaction
 from .services import bulk_history, record_change, to_decimal
 from .units import UNITS, compatible, convert
@@ -28,7 +30,7 @@ class CostField(QuantityField):
 
 
 class IngredientSerializer(serializers.ModelSerializer):
-    ingredient_id = serializers.IntegerField(source='pk', read_only=True)
+    ingredient_id = serializers.CharField(source='pk', read_only=True)
     ingredient = serializers.CharField(source='name', max_length=100)
     stock = QuantityField(source='current_stock', required=False)
     threshold = QuantityField(source='reorder_threshold', required=False)
@@ -95,16 +97,27 @@ class IngredientSerializer(serializers.ModelSerializer):
         stock = validated_data.pop('current_stock', to_decimal(0))
         ing = Ingredient.objects.create(current_stock=0, **validated_data)
         record_change(ing, stock, InventoryTransaction.Type.INITIAL, description='Ingredient added')
+        log(Category.INVENTORY, 'Ingredient added', ing.name,
+            f'+{fmt_qty(stock)} {ing.unit}', Delta.POSITIVE, ingredient=ing)
         return ing
 
     @transaction.atomic
     def update(self, instance, validated_data):
         instance = Ingredient.objects.select_for_update().get(pk=instance.pk)
+        old_stock = instance.current_stock
         new_stock = validated_data.pop('current_stock', None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
-        if new_stock is not None and new_stock != instance.current_stock:
+
+        if new_stock is not None and new_stock != old_stock:
             record_change(instance, new_stock, InventoryTransaction.Type.ADJUSTMENT,
                           description='Stock edited')
+            diff = new_stock - old_stock
+            log(Category.INVENTORY, 'Stock adjusted', instance.name,
+                f'{"+" if diff > 0 else "-"}{fmt_qty(abs(diff))} {instance.unit}',
+                Delta.POSITIVE if diff > 0 else Delta.NEGATIVE, ingredient=instance)
+        elif validated_data:
+            log(Category.INVENTORY, 'Ingredient updated', instance.name, 'Edited',
+                ingredient=instance)
         return instance
