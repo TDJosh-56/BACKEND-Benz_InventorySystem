@@ -1,6 +1,5 @@
 from rest_framework import serializers
 
-from production.models import ProductionRecord
 from recipe.models import Recipe
 from .models import AuditLog
 

@@ -9,7 +9,6 @@ from app_settings.models import Setting
 from audit.models import AuditLog
 from recipe.models import Recipe
 from inventory.models import Ingredient
-from production.models import ProductionRecord
 
 
 class AuditApiTests(TestCase):
@@ -106,7 +105,6 @@ class AuditHooksTests(TestCase):
         Recipe.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(days=45))
         fresh = Recipe.objects.create(name='Fresh', category='food', yield_per_batch=1,
                                       yield_unit='pc', price=1, description='d')
-        ProductionRecord.objects.create(recipe_name='Fresh', quantity=1)
 
         s = Setting.load()
         s.autoarchiveoldrecipe = False
