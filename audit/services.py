@@ -19,6 +19,7 @@ def log(category, title, subtitle='', change='', delta=Delta.NEUTRAL,
         settings=settings,
     )
 
+log_event = log  
 
 def fmt_qty(value):
     """12.5000 -> '12.5', 3.0000 -> '3'."""

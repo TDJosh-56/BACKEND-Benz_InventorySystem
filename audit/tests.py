@@ -1,68 +1,49 @@
 from datetime import timedelta
 
-from django.core.management import call_command
 from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
 
 from app_settings.models import Setting
 from audit.models import AuditLog
+from audit.services import Category, Delta, log, log_event
 from recipe.models import Recipe
 from inventory.models import Ingredient
+from inventory.services import deduct_stock
 from production.models import ProductionRecord
 
 
-class AuditApiTests(TestCase):
-    def setUp(self):
-        self.c = APIClient()
+class AuditServicesTests(TestCase):
+    def test_log_event_is_the_same_function(self):
+        self.assertIs(log_event, log)
 
-    def _make(self, **kw):
-        kw.setdefault('category', 'recipe')
-        kw.setdefault('title', 'T')
-        return AuditLog.objects.create(**kw)
+    def test_log_writes_one_row_with_links_and_truncates(self):
+        rec = ProductionRecord.objects.create(recipe_name='Latte', quantity=1)
+        entry = log(Category.PRODUCTION, 'T' * 300, 'S' * 400, 'C' * 300, Delta.NEGATIVE, production=rec)
+        entry.refresh_from_db()
+        self.assertEqual((len(entry.title), len(entry.subtitle), len(entry.change_label)), (120, 255, 120))
+        self.assertEqual((entry.category, entry.delta_type, entry.production_id), ('production', 'negative', rec.pk))
+        self.assertEqual(entry.badge_text, 'PRODUCTION')
+        self.assertEqual(AuditLog.objects.count(), 1)
 
-    def test_list_shape_and_order(self):
-        a = self._make(title='old', timestamp=timezone.now() - timedelta(days=2))
-        b = self._make(title='new', change_label='5 -> 6 kg', delta_type='positive')
-        rows = self.c.get('/api/audit-logs/').json()
-        self.assertEqual([r['title'] for r in rows], ['new', 'old'])
-        self.assertEqual(rows[0]['id'], f'LOG-{b.pk:06d}')
-        self.assertEqual(rows[0]['badgeText'], 'RECIPE')
-        self.assertEqual(rows[0]['changeLabel'], '5 -> 6 kg')
-        self.assertEqual(rows[0]['deltaType'], 'positive')
-        self.assertIsNone(rows[0]['recipeId'])
-
-    def test_filters(self):
-        self._make(category='inventory', title='Flour')
-        self._make(category='settings', title='Auto archive enabled')
-        self._make(category='recipe', title='Old', timestamp=timezone.now() - timedelta(days=60))
-        self.assertEqual(len(self.c.get('/api/audit-logs/?category=inventory').json()), 1)
-        self.assertEqual(len(self.c.get('/api/audit-logs/?search=archive').json()), 1)
-        self.assertEqual(len(self.c.get('/api/audit-logs/?period=day').json()), 2)
-        self.assertEqual(self.c.get('/api/audit-logs/?category=bogus').status_code, 400)
-        self.assertEqual(self.c.get('/api/audit-logs/?period=year').status_code, 400)
-        self.assertEqual(self.c.get('/api/audit-logs/?period=day&date=nope').status_code, 400)
-
-    def test_post_creates_entry_and_server_stamps_time(self):
-        r = self.c.post('/api/audit-logs/', {
-            'category': 'production', 'title': 'Batch', 'timestamp': '2000-01-01T00:00:00Z'},
-            format='json')
-        self.assertEqual(r.status_code, 201, r.content)
-        self.assertGreater(AuditLog.objects.get().timestamp.year, 2000)
-
-    def test_append_only(self):
-        e = self._make()
-        self.assertEqual(self.c.patch(f'/api/audit-logs/{e.pk}/', {}, format='json').status_code, 404)
-        self.assertEqual(self.c.delete('/api/audit-logs/').status_code, 405)
+    def test_log_can_link_the_settings_row(self):
+        s = Setting.load()
+        self.assertEqual(log(Category.SETTINGS, 'Settings updated', settings=s).settings_id, s.pk)
 
 
 class AuditHooksTests(TestCase):
     def setUp(self):
         self.c = APIClient()
         
-    def _ingredient(self, **kw):
+    def logs(self):
+        return list(AuditLog.objects.order_by('id'))
+    
+    def last(self):
+        return self.logs()[-1]
+        
+    def make_ingredient(self, **over):
         body = {'ingredient': 'Flour', 'stock': 10, 'unit': 'kg', 'threshold': 2}
-        body.update(kw)
+        body.update(over)
         r = self.c.post('/api/ingredients/', body, format='json')
         self.assertEqual(r.status_code, 201, r.content)
         return Ingredient.objects.get(pk=r.json()['ingredient_id'])

@@ -9,9 +9,9 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('app_settings', '0001_initial'),
-        ('inventory', '0002_ingredient_cost_item'),
+        ('inventory', '0001_initial'),
         ('production', '0001_initial'),
-        ('recipe', '0002_recipe_created_at_alter_recipe_image'),
+        ('recipe', '0001_initial'),
     ]
     
     operations = [

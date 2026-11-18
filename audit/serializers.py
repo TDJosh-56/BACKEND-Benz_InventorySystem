@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from production.models import ProductionRecord
 from recipe.models import Recipe
 from .models import AuditLog
 
@@ -12,11 +13,12 @@ class AuditLogSerializer(serializers.ModelSerializer):
     deltaType = serializers.CharField(source='delta_type', read_only=True)
     recipeId = serializers.IntegerField(source='recipe_id', read_only=True)
     ingredientId = serializers.IntegerField(source='ingredient_id', read_only=True)
+    productionId = serializers.IntegerField(source='production_id', read_only=True)
 
     class Meta:
         model = AuditLog
         fields = ['id', 'timestamp', 'category', 'badgeText', 'title', 'subtitle',
-                  'changeLabel', 'deltaType', 'recipeId', 'ingredientId']
+                  'changeLabel', 'deltaType', 'recipeId', 'ingredientId', 'productionId']
 
     def get_id(self, obj):
         return f'LOG-{obj.pk:06d}'
@@ -31,6 +33,8 @@ class AuditLogCreateSerializer(serializers.Serializer):
     deltaType = serializers.ChoiceField(choices=AuditLog.Delta.choices, default=AuditLog.Delta.NEUTRAL)
     recipeId = serializers.PrimaryKeyRelatedField(
         source='recipe', queryset=Recipe.objects.all(), required=False, allow_null=True)
+    productionId = serializers.PrimaryKeyRelatedField(
+        source='production', queryset=ProductionRecord.objects.all(), required=False, allow_null=True)
 
     def create(self, validated_data):
         # The server stamps the time - clients cannot back-date audit entries.
@@ -41,4 +45,5 @@ class AuditLogCreateSerializer(serializers.Serializer):
             change_label=validated_data['changeLabel'].strip(),
             delta_type=validated_data['deltaType'],
             recipe=validated_data.get('recipe'),
+            production=validated_data.get('production')
         )
