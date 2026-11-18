@@ -1,14 +1,14 @@
 """Report calculations. Mirrors the logic of the Flutter ReportsScreen."""
+import re
 from collections import defaultdict
 from datetime import datetime, time, timedelta
 from decimal import Decimal
 
+from django.db.models import Sum
 from django.utils import timezone
 
-from inventory.models import Ingredient
-from inventory.units import convert
+from inventory.models import Ingredient, InventoryTransaction
 from production.models import ProductionRecord
-from recipe.models import Recipe, RecipeIngredient
 
 ALLOWED_RANGES = (7, 30, 90, 180, 365)
 DEFAULT_DAYS = 30
@@ -46,7 +46,8 @@ def date_window(days):
 def category_for(name):
     lower = name.lower()
     for category, words in CATEGORY_KEYWORDS.items():
-        if any(w in lower for w in words):
+        # keyword must START a word: "oat" matches "Oats" but not "Goat Milk"
+        if any(re.search(r'\b' + re.escape(w), lower) for w in words):
             return category
     return OTHER_CATEGORY
 
@@ -62,36 +63,21 @@ def get_records(start_date):
     return list(ProductionRecord.objects.filter(timestamp__gte=start_dt).order_by('timestamp'))
 
 
-def calculate_usage(records, ingredients):
-    """{ingredient_id: Decimal used}, expressed in each ingredient's stock unit."""
-    units = {i.pk: i.unit for i in ingredients}
+def calculate_usage(start_date, ingredients):
+    """{ingredient_id: Decimal used} in each ingredient's stock unit.
 
-    # Recipes are matched by name (ProductionRecord stores a name, not a FK).
-    # Active recipes win over archived ones with the same name.
-    recipes = {}
-    for r in Recipe.objects.order_by('-is_archive', 'id'):
-        recipes[r.name] = r.pk
-    lines_by_recipe = defaultdict(list)
-    for line in RecipeIngredient.objects.filter(recipe_id__in=set(recipes.values())):
-        lines_by_recipe[line.recipe_id].append(line)
-
-    produced = defaultdict(int)
-    for rec in records:
-        produced[rec.recipe_name] += rec.quantity
-
-    usage = defaultdict(Decimal)
-    for recipe_name, qty in produced.items():
-        recipe_id = recipes.get(recipe_name)
-        if recipe_id is None:
-            continue
-        for line in lines_by_recipe[recipe_id]:
-            stock_unit = units.get(line.ingredient_id)
-            if stock_unit is None:  # inactive ingredient
-                continue
-            converted = convert(line.quantity, line.unit, stock_unit)
-            per_unit = Decimal(str(line.quantity)) if converted is None else converted
-            usage[line.ingredient_id] += per_unit * qty
-    return usage
+    Read straight from the stock ledger: every production already wrote a
+    negative InventoryTransaction, so this always ties out with stock, even if
+    a recipe is later renamed, deleted or edited."""
+    tz = timezone.get_current_timezone()
+    start_dt = timezone.make_aware(datetime.combine(start_date, time.min), tz)
+    rows = (InventoryTransaction.objects
+            .filter(transaction_type=InventoryTransaction.Type.PRODUCTION,
+                    created_at__gte=start_dt,
+                    ingredient_id__in=[i.pk for i in ingredients])
+            .values('ingredient_id')
+            .annotate(total=Sum('quantity_change')))
+    return {r['ingredient_id']: -r['total'] for r in rows}
 
 
 def production_series(records, days, start_date):
@@ -114,7 +100,7 @@ def build_report(days=DEFAULT_DAYS, status_filter=None):
     start, end = date_window(days)
     ingredients = list(Ingredient.objects.filter(is_active=True).order_by('name'))
     records = get_records(start)
-    usage = calculate_usage(records, ingredients)
+    usage = calculate_usage(start, ingredients)
 
     total = sum(r.quantity for r in records)
     counts = {'in_stock': 0, 'low_stock': 0, 'out_of_stock': 0}
