@@ -37,7 +37,6 @@ GET /api/dashboard/
 {
   "summary": {
     "total_ingredients": 25,
-    "total_materials": 10,
     "low_stock_alerts": 4,
     "out_of_stock_alerts": 2,
     "production_today": 143
@@ -94,7 +93,6 @@ Provides the key statistics displayed in the dashboard's summary cards.
 | Field | Type | Description |
 |---|---|---|
 | `total_ingredients` | Integer | Total number of active ingredients |
-| `total_materials` | Integer | Total number of materials |
 | `low_stock_alerts` | Integer | Number of ingredients with low stock |
 | `out_of_stock_alerts` | Integer | Number of ingredients with no available stock |
 | `production_today` | Integer | Total quantity of products produced today |

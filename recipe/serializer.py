@@ -87,7 +87,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     isArchived = serializers.BooleanField(source='is_archive', default=False)
     price = serializers.FloatField(min_value=0.01)
     yieldAmount = serializers.IntegerField(source='yield_per_batch', min_value=1)
-    yieldUnit = serializers.CharField(source='yield_unit')
+    yieldUnit = serializers.CharField(source='yield_unit', max_length=20)
     ingredients = RecipeIngredientSerializer(source='recipe_ingredients', many=True, required=False)
     imageUrl = Base64ImageField(source='image', validators=[validate_image_size])
 
