@@ -3,7 +3,6 @@ from rest_framework import serializers
 
 class DashboardSummarySerializer(serializers.Serializer):
     total_ingredients = serializers.IntegerField()
-    total_materials = serializers.IntegerField()
     low_stock_alerts = serializers.IntegerField()
     out_of_stock_alerts = serializers.IntegerField()
     production_today = serializers.IntegerField()

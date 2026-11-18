@@ -51,8 +51,7 @@ def get_stock_item_data(item):
 
 def get_dashboard_data():
     inventory = get_inventory_items()
-
-    stock_counts = get_stock_status_counts(inventory)
+    counts = get_stock_status_counts(inventory)
 
     stock_alerts = [
         get_stock_item_data(item)
@@ -67,15 +66,15 @@ def get_dashboard_data():
 
     return {
         'summary': {
-            'total_inventory': len(inventory),
-            'low_stock_alerts': stock_counts['low_stock'],
-            'out_of_stock_alerts': stock_counts['out_of_stock'],
+            'total_ingredients': len(inventory),
+            'low_stock_alerts': counts['low_stock'],
+            'out_of_stock_alerts': counts['out_of_stock'],
             'production_today': get_production_today(),
         },
         'stock_alerts': stock_alerts,
         'stock_levels': stock_levels,
         'stock_overview': {
-            **stock_counts,
+            **counts,
             'total': len(inventory),
         },
     }

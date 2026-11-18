@@ -9,6 +9,7 @@ from app_settings.models import Setting
 from audit.models import AuditLog
 from recipe.models import Recipe
 from inventory.models import Ingredient
+from production.models import ProductionRecord
 
 
 class AuditApiTests(TestCase):
@@ -53,6 +54,7 @@ class AuditApiTests(TestCase):
         e = self._make()
         self.assertEqual(self.c.patch(f'/api/audit-logs/{e.pk}/', {}, format='json').status_code, 404)
         self.assertEqual(self.c.delete('/api/audit-logs/').status_code, 405)
+
 
 
 class AuditHooksTests(TestCase):
