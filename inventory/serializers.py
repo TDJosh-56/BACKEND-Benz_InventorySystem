@@ -101,23 +101,88 @@ class IngredientSerializer(serializers.ModelSerializer):
             f'+{fmt_qty(stock)} {ing.unit}', Delta.POSITIVE, ingredient=ing)
         return ing
 
+
     @transaction.atomic
     def update(self, instance, validated_data):
         instance = Ingredient.objects.select_for_update().get(pk=instance.pk)
+
+        old_unit = instance.unit
+        new_unit = validated_data.get('unit', old_unit)
         old_stock = instance.current_stock
+
+        # Convert existing stock and transaction history if the unit changes.
+        if new_unit != old_unit:
+            converted_stock = convert(old_stock, old_unit, new_unit)
+
+            if converted_stock is None:
+                raise serializers.ValidationError({
+                    'unit': f'Cannot convert {old_unit} to {new_unit}.'
+                })
+
+            transactions = list(
+                InventoryTransaction.objects.filter(
+                    ingredient=instance
+                )
+            )
+
+            for tx in transactions:
+                tx.previous_stock = to_decimal(
+                    convert(tx.previous_stock, old_unit, new_unit)
+                )
+                tx.new_stock = to_decimal(
+                    convert(tx.new_stock, old_unit, new_unit)
+                )
+                tx.quantity_change = to_decimal(
+                    convert(tx.quantity_change, old_unit, new_unit)
+                )
+
+            if transactions:
+                InventoryTransaction.objects.bulk_update(
+                    transactions,
+                    ['previous_stock', 'new_stock', 'quantity_change']
+                )
+
+            instance.current_stock = to_decimal(converted_stock)
+
+        # Apply the remaining ingredient changes.
         new_stock = validated_data.pop('current_stock', None)
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
+
         instance.save()
 
-        if new_stock is not None and new_stock != old_stock:
-            record_change(instance, new_stock, InventoryTransaction.Type.ADJUSTMENT,
-                          description='Stock edited')
-            diff = new_stock - old_stock
-            log(Category.INVENTORY, 'Stock adjusted', instance.name,
+        # Apply a manual stock adjustment if one was provided.
+        if new_stock is not None and new_stock != instance.current_stock:
+            previous_stock = instance.current_stock
+
+            record_change(
+                instance,
+                new_stock,
+                InventoryTransaction.Type.ADJUSTMENT,
+                description='Stock edited'
+            )
+
+            diff = new_stock - previous_stock
+
+            log(
+                Category.INVENTORY,
+                'Stock adjusted',
+                instance.name,
                 f'{"+" if diff > 0 else "-"}{fmt_qty(abs(diff))} {instance.unit}',
-                Delta.POSITIVE if diff > 0 else Delta.NEGATIVE, ingredient=instance)
-        elif validated_data:
-            log(Category.INVENTORY, 'Ingredient updated', instance.name, 'Edited',
-                ingredient=instance)
+                Delta.POSITIVE if diff > 0 else Delta.NEGATIVE,
+                ingredient=instance
+            )
+
+        elif validated_data or new_unit != old_unit:
+            log(
+                Category.INVENTORY,
+                'Ingredient updated',
+                instance.name,
+                'Edited',
+                ingredient=instance
+            )
+
         return instance
+
+   
