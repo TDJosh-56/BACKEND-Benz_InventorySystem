@@ -38,14 +38,26 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken',
     'app_settings',
-    'recipe',
     'audit',
-    'production',
     'inventory',
+    'recipe',
+    'production',
     'dashboard',
     'reports',
 ]
+
+# added for logn :'D -belle
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
+
 
 MIDDLEWARE = [
     'config.cors.DevCorsMiddleware',
