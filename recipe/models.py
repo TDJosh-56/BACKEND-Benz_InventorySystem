@@ -41,3 +41,6 @@ class RecipeIngredient(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['recipe', 'ingredient'], name='unique_recipe_ingredient')
         ]
+
+class AutoArchiveState(models.Model):
+    last_run = models.DateField(null=True, blank=True)

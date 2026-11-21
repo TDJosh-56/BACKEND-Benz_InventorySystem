@@ -7,6 +7,8 @@ from django.db.models import Q, Count
 from rest_framework import status
 from django.shortcuts import get_object_or_404 
 from audit.services import log, Category, Delta
+from .services.archive import autoarchive_if_due
+
 
 @api_view(['GET'])
 def get_subcategories(request):
@@ -19,6 +21,7 @@ def get_subcategories(request):
 def get_recipe(request):
     
     if request.method == 'GET':
+        autoarchive_if_due()
         status_filter = request.GET.get('status')
         search = request.GET.get('search')
         category = request.GET.get('category')

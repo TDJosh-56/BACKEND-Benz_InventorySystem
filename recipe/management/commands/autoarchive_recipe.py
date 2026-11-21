@@ -3,13 +3,13 @@ from recipe.services.archive import autoarchive
 
 
 class Command(BaseCommand):
-    help = "Automatically archive unused recipes"
+    help = "Archive recipes that have not been used for 30 days"
 
     def handle(self, *args, **options):
         count = autoarchive()
 
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"Archived {count} unused recipes."
-            )
-        )
+        if count is None:
+            self.stdout.write(self.style.WARNING("Auto-archive is turned off in settings."))
+            return
+
+        self.stdout.write(self.style.SUCCESS(f"Archived {count} unused recipe(s)."))
