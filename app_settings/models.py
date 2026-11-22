@@ -45,6 +45,9 @@ class Setting(models.Model):
         if not obj.passcode_hash:
            obj.passcode_hash = make_password(DEFAULT_PASSCODE)
            dirty = True
+        if not obj.recovery_code_hash:
+            obj.recovery_code_hash = make_password(DEFAULT_RECOVERY_CODE)
+            dirty = True
         if created or dirty:
            obj.save()
         return obj
@@ -60,6 +63,10 @@ class Setting(models.Model):
           self.save(update_fields = ['locked_until', 'failed_attempts'])
           return False
 
+    @property
+    def attempts_remaining(self) -> int:
+       return max(0, MAX_FAILED_ATTEMPTS - self.failed_attempts)
+   
     def seconds_until_unlock(self) -> int:
        if not self.locked_until:
           return 0
