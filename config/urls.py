@@ -28,6 +28,8 @@ urlpatterns = [
     path('api/production/', include('production.urls')),
     path('api/dashboard/', include('dashboard.urls')),
     path('api/reports/', include('reports.urls')),
+    path('api/settings/', include('app_settings.urls')),
+    path('api/audit-logs/', include('audit.urls')),
     path('api/auth/login/', LoginView.as_view(), name='api-login'),
 ]
 
