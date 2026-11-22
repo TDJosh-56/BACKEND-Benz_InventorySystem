@@ -9,6 +9,10 @@ __pycache__/
 venv/
 .venv/
 
+# Media / Uploads
+media/
+uploads/
+
 # IDE
 .vscode/
 .idea/
