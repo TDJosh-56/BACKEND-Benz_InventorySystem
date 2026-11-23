@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import transaction
 from rest_framework import status
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -38,7 +39,7 @@ def _failed_response(setting, message):
     if locked:
         audit.log(AuditLog.Category.SETTINGS, 'Security lockout',
                   f'{MAX_FAILED_ATTEMPTS} failed attempts', 'Locked',
-                  AuditLog.Delta.NEGATIVE, setting=setting)
+                  AuditLog.Delta.NEGATIVE, settings=setting)
     return Response({
         'status': 'error',
         'message': message,
@@ -77,30 +78,31 @@ class SettingsView(APIView):
                 f'{label} turned {"on" if new else "off"}',
                 f'{"On" if old else "Off"} → {"On" if new else "Off"}',
                 AuditLog.Delta.NEUTRAL,
-                setting=setting,
+                settings=setting,
             )
         return Response(SettingSerializer(setting).data)
 
 
 class VerifyPasscodeView(APIView):
-    """POST {recovery_code} -> 200 on success, 401 on a wrong code, 423 while locked."""
-    
+    """POST {passcode} -> 200 on success, 401 on a wrong PIN, 423 while locked."""
+    permission_classes = [AllowAny]
+
     @transaction.atomic
     def post(self, request):
-        ser = RecoveryCodeSerializer(data=request.data)
+        ser = PasscodeSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
-    
+
         setting = Setting.load()
         if setting.is_locked():
             return _locked_response(setting)
-        if setting.verify_recovery_code(ser.validated_data['recovery_code']):
-            return Response({'status': 'success', 'message': 'Recovery code verified.'})
-        return _failed_response(setting, 'Incorrect recovery code.')
-
+        if setting.verify_passcode(ser.validated_data['passcode']):
+            return Response({'status': 'success', 'message': 'Passcode verified.'})
+        return _failed_response(setting, 'Incorrect passcode.')
 
 class VerifyRecoveryView(APIView):
     """POST {recovery_code} -> 200 on success, 401 on a wrong code, 423 while locked."""
-   
+    permission_classes = [AllowAny]
+
     @transaction.atomic
     def post(self, request):
         ser = RecoveryCodeSerializer(data=request.data)
@@ -116,7 +118,8 @@ class VerifyRecoveryView(APIView):
 
 class ResetPasscodeView(APIView):
     """POST {recovery_code, new_passcode, confirm_passcode} - forgot-PIN flow."""
-
+    permission_classes = [AllowAny]
+    
     @transaction.atomic
     def post(self, request):
         ser = ResetPasscodeSerializer(data=request.data)
@@ -130,7 +133,7 @@ class ResetPasscodeView(APIView):
 
         setting.set_passcode(ser.validated_data['new_passcode'])
         audit.log(AuditLog.Category.SETTINGS, 'Passcode reset', 'Reset with recovery code',
-                  'Passcode changed', AuditLog.Delta.NEUTRAL, setting=setting)
+                  'Passcode changed', AuditLog.Delta.NEUTRAL, settings=setting)
         return Response({'status': 'success', 'message': 'Passcode has been reset.'})
 
 
@@ -150,5 +153,5 @@ class ChangePasscodeView(APIView):
 
         setting.set_passcode(ser.validated_data['new_passcode'])
         audit.log(AuditLog.Category.SETTINGS, 'Passcode changed', 'Security passcode updated',
-                  'Passcode changed', AuditLog.Delta.NEUTRAL, setting=setting)
+                  'Passcode changed', AuditLog.Delta.NEUTRAL, settings=setting)
         return Response({'status': 'success', 'message': 'Passcode changed successfully.'})
