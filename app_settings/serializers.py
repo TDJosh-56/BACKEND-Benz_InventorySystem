@@ -41,22 +41,25 @@ class RecoveryCodeSerializer(serializers.Serializer):
 
 class ResetPasscodeSerializer(serializers.Serializer):
     recovery_code = serializers.CharField(
-        max_length = 64,
-        trim_whitespace = True,
-        write_only = True,
-        validators = [validate_four_digit_pin],
+        required=True,
+        allow_blank=False,
+        max_length=64,
+        trim_whitespace=True,
+        write_only=True,
     )
     new_passcode = serializers.CharField(
-        min_length = 4,
-        max_length = 4,
-        trim_whitespace = True,
-        validators = [validate_four_digit_pin]
+        min_length=4,
+        max_length=4,
+        trim_whitespace=True,
+        write_only=True,
+        validators=[validate_four_digit_pin],
     )
     confirm_passcode = serializers.CharField(
-        min_length = 4,
-        max_length = 4,
-        write_only = True,
-        validators = [validate_four_digit_pin],
+        min_length=4,
+        max_length=4,
+        trim_whitespace=True,
+        write_only=True,
+        validators=[validate_four_digit_pin],
     )
 
     def validate_recovery_code(self, value: str) -> str:

@@ -39,18 +39,18 @@ class Setting(models.Model):
 
     @classmethod
     def load(cls) -> 'Setting':
-        # fetch or create the singleton role (pk = 1) with default demo credentials
-        obj, created = cls.objects.get_or_create(pk = 1)
+        obj, created = cls.objects.get_or_create(pk=1)
         dirty = False
         if not obj.passcode_hash:
-           obj.passcode_hash = make_password(DEFAULT_PASSCODE)
-           dirty = True
+            obj.passcode_hash = make_password(DEFAULT_PASSCODE)
+            dirty = True
         if not obj.recovery_code_hash:
             obj.recovery_code_hash = make_password(DEFAULT_RECOVERY_CODE)
             dirty = True
         if created or dirty:
-           obj.save()
+            obj.save() 
         return obj
+
 
     def is_locked(self) -> bool:
        # return true if a brute-force lockout window is currently active
@@ -84,8 +84,18 @@ class Setting(models.Model):
         self.save(update_fields=['recovery_code_hash', 'updated_at'])
 
     def verify_passcode(self, raw_passcode: str) -> bool:
-        #check PIN and update brute-force counters
+        # check PIN and update brute-force counters
         if check_password(raw_passcode, self.passcode_hash):
+            if self.failed_attempts or self.locked_until:
+                self.failed_attempts = 0
+                self.locked_until = None
+                self.save(update_fields=['failed_attempts', 'locked_until'])
+            return True
+
+    def verify_recovery_code(self, raw_code: str) -> bool:
+        # check normalized recovery code against stored hash and track failed attempts
+        normalized = raw_code.strip().upper()
+        if check_password(normalized, self.recovery_code_hash):
             if self.failed_attempts or self.locked_until:
                 self.failed_attempts = 0
                 self.locked_until = None
@@ -99,6 +109,7 @@ class Setting(models.Model):
             update_fields.append('locked_until')
         self.save(update_fields=update_fields)
         return False
+
 
     def verify_recovery_code(self, raw_code: str) -> bool:
         # check normalized recovery code against stored hash
