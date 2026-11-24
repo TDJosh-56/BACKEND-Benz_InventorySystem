@@ -1,33 +1,3 @@
-# BENZ Coffee Management System — Prototype Work-in-Progress
-
-Flutter/Dart source extracted from the provided RAR, with first-pass functional improvements.
-
-## What's changed
-- Added four-digit PIN login, recovery, reset, confirmation, and logout (local demonstration only).
-- Expanded Recipes with grid/list views, search, category filters, images, details, create/edit, archive, and delete.
-- Added production quantity controls, product images, cart totals, remove action, and inventory checks.
-- Added audit entries for inventory, recipe, production, and settings changes, plus day/week/month audit filtering.
-- Replaced Reports placeholders with data-backed summaries and bars.
-- Expanded Settings with editable cafe information and preferences.
-- Fixed hardcoded dashboard counters and header date, and added inventory validation and delete confirmation.
-
-## Important limitations
-- **This is a prototype, not production-ready software.** All data is in memory and resets on restart.
-- Demo PIN is initially `1234`. Recovery code is configured in the mock model. These values are not secure and must never be used for a deployed system.
-- Auth uses a demo in-memory implementation. Rate limiting, secure storage, PIN verification, recovery, and authorization need a real backend.
-- Recipe forms currently use modal dialogs rather than the precise side panels in the Figma reference.
-- Dashboard trend chart remains illustrative. Reports show production summaries and current stock, not full historical ingredient consumption.
-- Existing platform folders are in the original RAR. This ZIP contains the editable Flutter source and pubspec.yaml, not generated platform/build artifacts.
-- Flutter SDK was not available in the authoring environment, so **the code has not been compiled or device-tested**.
-
-## Run
-1. Create a Flutter project or use the platform folders in your original project.
-2. Copy `lib/` and `pubspec.yaml` into that project.
-3. Run `flutter pub get` and `flutter run`.
-4. Run `flutter analyze` and report any errors for correction.
-
-
-
 # BENZ Coffee Inventory Management System
 ## Developer and Testing Team Setup Guide
 
