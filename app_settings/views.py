@@ -18,8 +18,7 @@ from .serializers import (
 )
 
 FIELD_LABELS = {
-    'auto_archive_old_recipe': 'Auto archive',
-    'allow_production_override': 'Production override',
+    'autoarchiveoldrecipe': 'Auto archive old recipes',
 }
 
 
@@ -51,7 +50,7 @@ def _failed_response(setting, message):
 
 class SettingsView(APIView):
     """
-    GET   /api/settings/   -> {autoArchiveOldRecipes, allowProductionOverride, updated_at}
+    GET   /api/settings/   -> {autoArchiveOldRecipes, updated_at}
     PATCH /api/settings/   -> same shape; only real changes are written to the audit log
     Credentials are never returned.
     """

@@ -31,16 +31,44 @@ class SettingsApiTests(TestCase):
         self.assertFalse(Setting.load().autoarchiveoldrecipe)
         e = AuditLog.objects.get()
         self.assertEqual((e.category, e.title, e.subtitle, e.change_label),
-                         ('settings', 'Setting changed', 'Auto archive turned off', 'On → Off'))
+                         ('settings', 'Setting changed', 'Auto archive old recipes turned off', 'On → Off'))
         self.assertIsNotNone(e.settings_id)
 
         
         self.c.patch(URL, {'autoArchiveOldRecipes': False}, format='json')
         self.assertEqual(AuditLog.objects.count(), 1)
 
-        self.c.patch(URL, {'allowProductionOverride': False}, format='json')
-        self.assertEqual(AuditLog.objects.count(), 2)
-        self.assertTrue(AuditLog.objects.first().subtitle.startswith('Production override'))
+        # The removed production-override preference is no longer accepted or exposed.
+        removed = self.c.patch(URL, {'allowProductionOverride': False}, format='json')
+        self.assertEqual(removed.status_code, 200)
+        self.assertNotIn('allowProductionOverride', removed.json())       
+        self.assertEqual(AuditLog.objects.count(), 1)
+        
+        
+    def test_auto_archive_patch_is_persisted_and_returned(self):
+        response = self.c.patch(URL, {'autoArchiveOldRecipes': False}, format='json')
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertFalse(response.json()['autoArchiveOldRecipes'])
+        self.assertFalse(Setting.load().autoarchiveoldrecipe)
+        
+        # A fresh GET (as Django Admin reads the same model row) sees the same value.
+        fresh = self.c.get(URL)
+        self.assertEqual(fresh.status_code, 200)
+        self.assertFalse(fresh.json()['autoArchiveOldRecipes'])
+
+    def test_removed_production_override_is_not_a_model_field(self):
+        self.assertNotIn(
+            'allow_production_override',
+            {field.name for field in Setting._meta.get_fields()},
+        )
+
+
+    def test_django_admin_no_longer_displays_removed_override(self):
+        from .admin import SettingAdmin
+
+        self.assertNotIn('allow_production_override', SettingAdmin.list_display)
+        self.assertIn('autoarchiveoldrecipe', SettingAdmin.list_display)
+        self.assertIn('autoarchiveoldrecipe', SettingAdmin.list_editable)
 
     def test_patch_rejects_non_boolean(self):
         self.assertEqual(self.c.patch(URL, {'autoArchiveOldRecipes': 'maybe'}, format='json').status_code, 400)
