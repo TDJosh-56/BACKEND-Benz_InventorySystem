@@ -1,3 +1,4 @@
+from django.contrib.auth.hashers import check_password
 from rest_framework import serializers
 
 from .models import Setting
@@ -19,20 +20,22 @@ class SettingSerializer(serializers.ModelSerializer):
         fields = ['autoArchiveOldRecipes', 'allowProductionOverride', 'updated_at']
         read_only_fields = ['updated_at']
 
+
 class PasscodeSerializer(serializers.Serializer):
     passcode = serializers.CharField(
-        min_length = 4,
-        max_length = 4,
-        trim_whitespace = True,
-        write_only = True,
-        validators = [validate_four_digit_pin],
+        min_length=4,
+        max_length=4,
+        trim_whitespace=True,
+        write_only=True,
+        validators=[validate_four_digit_pin],
     )
+
 
 class RecoveryCodeSerializer(serializers.Serializer):
     recovery_code = serializers.CharField(
-        max_length = 64,
-        trim_whitespace = True,
-        write_only = True,
+        max_length=64,
+        trim_whitespace=True,
+        write_only=True,
     )
 
     def validate_recovery_code(self, value: str) -> str:
@@ -70,29 +73,35 @@ class ResetPasscodeSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {"confirm_passcode": "New passcode and confirmation do not match."}
             )
+        setting = Setting.load()
+        if check_password(attrs["new_passcode"], setting.passcode_hash):
+            raise serializers.ValidationError(
+                {"new_passcode": "New passcode must be different from your current passcode."}
+            )
         return attrs
+
 
 class ChangePasscodeSerializer(serializers.Serializer):
     current_passcode = serializers.CharField(
-        min_length = 4,
-        max_length = 4,
-        trim_whitespace = True,
-        write_only = True,
-        validators = [validate_four_digit_pin]
+        min_length=4,
+        max_length=4,
+        trim_whitespace=True,
+        write_only=True,
+        validators=[validate_four_digit_pin],
     )
     new_passcode = serializers.CharField(
-        min_length = 4,
-        max_length = 4,
-        trim_whitespace = True,
-        write_only = True,
-        validators = [validate_four_digit_pin]
+        min_length=4,
+        max_length=4,
+        trim_whitespace=True,
+        write_only=True,
+        validators=[validate_four_digit_pin],
     )
     confirm_passcode = serializers.CharField(
-        min_length = 4,
-        max_length = 4,
-        trim_whitespace = True,
-        write_only = True,
-        validators = [validate_four_digit_pin]
+        min_length=4,
+        max_length=4,
+        trim_whitespace=True,
+        write_only=True,
+        validators=[validate_four_digit_pin],
     )
 
     def validate(self, attrs):
@@ -100,9 +109,8 @@ class ChangePasscodeSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {"confirm_passcode": "New passcode and confirmation do not match."}
             )
-    def validate(self, attrs):
-        if attrs["current_passcode"] != attrs["new_passcode"]:
+        if attrs["current_passcode"] == attrs["new_passcode"]:
             raise serializers.ValidationError(
-                {"confirm_passcode": "New passcode must be different from the current passcode."}
+                {"new_passcode": "New passcode must be different from the current passcode."}
             )
         return attrs
