@@ -17,7 +17,6 @@ class Setting(models.Model):
     """Singleton row (pk=1). Read it with `Setting.load()`."""
 
     autoarchiveoldrecipe = models.BooleanField(default=True)
-    allow_production_override = models.BooleanField(default=True)
 
     # Credentials are stored hashed, never in plain text.
     passcode_hash = models.CharField(max_length=128, blank = True)
