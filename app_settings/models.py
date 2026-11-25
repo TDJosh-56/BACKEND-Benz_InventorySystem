@@ -17,7 +17,6 @@ class Setting(models.Model):
     """Singleton row (pk=1). Read it with `Setting.load()`."""
 
     autoarchiveoldrecipe = models.BooleanField(default=True)
-    allow_production_override = models.BooleanField(default=True)
 
     # Credentials are stored hashed, never in plain text.
     passcode_hash = models.CharField(max_length=128, blank = True)
@@ -39,32 +38,39 @@ class Setting(models.Model):
 
     @classmethod
     def load(cls) -> 'Setting':
-        # fetch or create the singleton role (pk = 1) with default demo credentials
-        obj, created = cls.objects.get_or_create(pk = 1)
+        obj, created = cls.objects.get_or_create(pk=1)
         dirty = False
         if not obj.passcode_hash:
-           obj.passcode_hash = make_password(DEFAULT_PASSCODE)
-           dirty = True
+            obj.passcode_hash = make_password(DEFAULT_PASSCODE)
+            dirty = True
+        if not obj.recovery_code_hash:
+            obj.recovery_code_hash = make_password(DEFAULT_RECOVERY_CODE)
+            dirty = True
         if created or dirty:
-           obj.save()
+            obj.save() 
         return obj
 
+
     def is_locked(self) -> bool:
-       # return true if a brute-force lockout window is currently active
-       if self.locked_until and timezone.now() < self.locked_until:
-          return True 
-       if self.locked_until:
-          # lockout expired; clear it cleanly
-          self.locked_until = None
-          self.failed_attempts = 0
-          self.save(update_fields = ['locked_until', 'failed_attempts'])
-          return False
+        # return true if a brute-force lockout window is currently active
+        if self.locked_until and timezone.now() < self.locked_until:
+            return True
+        if self.locked_until:
+            # lockout expired; clear it cleanly
+            self.locked_until = None
+            self.failed_attempts = 0
+            self.save(update_fields=['locked_until', 'failed_attempts'])
+        return False
+
+    @property
+    def attempts_remaining(self) -> int:
+        return max(0, MAX_FAILED_ATTEMPTS - self.failed_attempts)
 
     def seconds_until_unlock(self) -> int:
-       if not self.locked_until:
-          return 0
-       remaining = (self.locked_until - timezone.now()).total_seconds()
-       return max(0, int(remaining))
+        if not self.locked_until:
+            return 0
+        remaining = (self.locked_until - timezone.now()).total_seconds()
+        return max(0, int(remaining))
 
     def set_passcode(self, raw_passcode: str) -> None:
         self.passcode_hash = make_password(raw_passcode)
@@ -76,8 +82,16 @@ class Setting(models.Model):
         self.recovery_code_hash = make_password(raw_code.strip().upper())
         self.save(update_fields=['recovery_code_hash', 'updated_at'])
 
+    def _record_failed_attempt(self) -> None:
+        self.failed_attempts += 1
+        update_fields = ['failed_attempts']
+        if self.failed_attempts >= MAX_FAILED_ATTEMPTS:
+            self.locked_until = timezone.now() + LOCKOUT
+            update_fields.append('locked_until')
+        self.save(update_fields=update_fields)
+
     def verify_passcode(self, raw_passcode: str) -> bool:
-        #check PIN and update brute-force counters
+        # check PIN and update brute-force counters
         if check_password(raw_passcode, self.passcode_hash):
             if self.failed_attempts or self.locked_until:
                 self.failed_attempts = 0
@@ -85,15 +99,18 @@ class Setting(models.Model):
                 self.save(update_fields=['failed_attempts', 'locked_until'])
             return True
 
-        self.failed_attempts += 1
-        update_fields = ['failed_attempts']
-        if self.failed_attempts >= MAX_FAILED_ATTEMPTS:
-            self.locked_until = timezone.now() + LOCKOUT
-            update_fields.append('locked_until')
-        self.save(update_fields=update_fields)
+        self._record_failed_attempt()
         return False
 
     def verify_recovery_code(self, raw_code: str) -> bool:
-        # check normalized recovery code against stored hash
+        # check normalized recovery code against stored hash and track failed attempts
         normalized = raw_code.strip().upper()
-        return check_password(normalized, self.recovery_code_hash)
+        if check_password(normalized, self.recovery_code_hash):
+            if self.failed_attempts or self.locked_until:
+                self.failed_attempts = 0
+                self.locked_until = None
+                self.save(update_fields=['failed_attempts', 'locked_until'])
+            return True
+
+        self._record_failed_attempt()
+        return False

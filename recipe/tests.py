@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.test import override_settings
 from django.urls import reverse
 from rest_framework.test import APITestCase
-
+from django.contrib.auth import get_user_model
 from inventory.models import Ingredient
 from recipe.models import Recipe, Subcategory
 
@@ -26,7 +26,8 @@ class RecipeApiTests(APITestCase):
         shutil.rmtree(TEMP_MEDIA, ignore_errors=True)
 
     def setUp(self):
-
+        user = get_user_model().objects.create_user('tester', password='pass12345')
+        self.client.force_authenticate(user)
         self.milk = Ingredient.objects.create(
             name='Whole Milk', current_stock=10, reorder_threshold=3, unit='L', reorder_unit='L')
         self.sugar = Ingredient.objects.create(
@@ -174,3 +175,14 @@ class RecipeApiTests(APITestCase):
         res = self.client.delete(reverse('recipe-detail', args=[rid]))
         self.assertEqual(res.status_code, 204)
         self.assertFalse(Recipe.objects.exists())
+
+    def test_requires_login(self):
+        self.client.force_authenticate(user=None)
+        res = self.client.get(self.list_url)
+        self.assertEqual(res.status_code, 401)
+
+    def test_login_returns_token(self):
+        self.client.force_authenticate(user=None)
+        res = self.client.post(reverse('api-login'), {'username': 'tester', 'password': 'pass12345'})
+        self.assertEqual(res.status_code, 200)
+        self.assertIn('token', res.data)
