@@ -34,7 +34,7 @@ class AuditLog(models.Model):
 
     class Meta:
         ordering = ['-timestamp', '-id']
-        indexes = [models.Index(fields=['category', 'timestamp'])]
+        indexes = [models.Index(fields=['category', 'timestamp'], name='audit_cat_ts_idx')]
 
     def __str__(self):
         return f'[{self.category}] {self.title} - {self.subtitle}'
